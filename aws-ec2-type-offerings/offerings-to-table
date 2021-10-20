@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+
+import csv
+import sys
+import argparse
+import json
+
+
+class OfferingsConveter:
+    def __init__(self):
+        self._args = None
+
+    def options(self, argv):
+        parser = argparse.ArgumentParser(
+            description="Convert EC2 Instance type offerings"
+        )
+        parser.add_argument("offerings")
+        parser.add_argument(
+            "--output", dest="output", default="csv", help="Output format (default csv)"
+        )
+        self._args = parser.parse_args(sys.argv[1:])
+
+    def convert(self):
+        data = self.load_file()
+        azs = sorted(list(set([x["Location"] for x in data])))
+        offerings_map = {}
+        for x in data:
+            if x["InstanceType"] not in offerings_map:
+                offerings_map[x["InstanceType"]] = dict(zip(azs, [False] * len(azs)))
+                offerings_map[x["InstanceType"]]["InstanceType"] = x["InstanceType"]
+            offerings_map[x["InstanceType"]][x["Location"]] = True
+        cw = csv.DictWriter(sys.stdout, fieldnames=["InstanceType"] + azs)
+        cw.writeheader()
+        for instance_type in sorted(offerings_map):
+            cw.writerow(offerings_map[instance_type])
+
+    def load_file(self):
+        with open(self._args.offerings) as f:
+            return json.load(f)
+
+
+if __name__ == "__main__":
+    c = OfferingsConveter()
+    c.options(sys.argv)
+    c.convert()
