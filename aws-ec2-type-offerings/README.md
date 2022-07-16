@@ -7,5 +7,5 @@ Currently accepted format is `csv`.
 
 ```console
 aws ec2 describe-instance-type-offerings --output json --location-type availability-zone --query 'InstanceTypeOfferings' > offerings.json
-./offerings-to-table < offerings.json
+./offerings-to-table offerings.json > offerings.csv
 ```
