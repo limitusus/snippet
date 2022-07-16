@@ -29,7 +29,7 @@ class OfferingsConveter:
                 offerings_map[x["InstanceType"]] = dict(zip(azs, [False] * len(azs)))
                 offerings_map[x["InstanceType"]]["InstanceType"] = x["InstanceType"]
             offerings_map[x["InstanceType"]][x["Location"]] = True
-        cw = csv.DictWriter(sys.stdout, fieldnames=["InstanceType"] + azs)
+        cw = csv.DictWriter(sys.stdout, fieldnames=["InstanceType"] + azs, dialect='unixcsv')
         cw.writeheader()
         for instance_type in sorted(offerings_map):
             cw.writerow(offerings_map[instance_type])
@@ -40,6 +40,7 @@ class OfferingsConveter:
 
 
 if __name__ == "__main__":
+    csv.register_dialect('unixcsv', lineterminator="\n")
     c = OfferingsConveter()
     c.options(sys.argv)
     c.convert()
