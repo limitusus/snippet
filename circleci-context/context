@@ -1,0 +1,52 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'uri'
+require 'net/http'
+require 'openssl'
+require 'json'
+
+def list_context
+  owner_slug = ENV['CIRCLECI_OWNER_SLUG']
+  url = URI("https://circleci.com/api/v2/context?owner-slug=#{owner_slug}&owner-type=organization")
+
+  http = Net::HTTP.new(url.host, url.port)
+  http.use_ssl = true
+  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+  request = Net::HTTP::Get.new(url)
+  request['Circle-Token'] = ENV['CIRCLECI_API_TOKEN']
+
+  response = http.request(request)
+  JSON.parse(response.read_body)['items']
+end
+
+def env_for_context(context_id)
+  url = URI("https://circleci.com/api/v2/context/#{context_id}/environment-variable")
+  http = Net::HTTP.new(url.host, url.port)
+  http.use_ssl = true
+  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+  request = Net::HTTP::Get.new(url)
+  request['Circle-Token'] = ENV['CIRCLECI_API_TOKEN']
+
+  response = http.request(request)
+  JSON.parse(response.read_body)['items']
+end
+
+envs = {}
+
+list_context.each do |context|
+  name = context['name']
+  envs[name] = []
+  env_for_context(context['id']).each do |env|
+    envs[name] << env['variable']
+  end
+end
+
+# Output
+envs.each do |context, vars|
+  vars.each do |env|
+    puts "#{context},#{env}"
+  end
+end
