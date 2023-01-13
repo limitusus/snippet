@@ -40,13 +40,14 @@ list_context.each do |context|
   name = context['name']
   envs[name] = []
   env_for_context(context['id']).each do |env|
-    envs[name] << env['variable']
+    envs[name] << [env['variable'], env['created_at'], env['updated_at']]
   end
 end
 
 # Output
+puts 'Context,Environment,Created At,Updated At'
 envs.each do |context, vars|
   vars.each do |env|
-    puts "#{context},#{env}"
+    puts "#{context},#{env[0]},#{env[1]},#{env[2]}"
   end
 end
