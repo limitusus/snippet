@@ -40,6 +40,7 @@ class OfferingsConverter:
         "Duration",
         "PaymentOption",
         "ReservedInstanceOfferingId",
+        "FixedPrice",
         ]
 
     def __init__(self, o):
@@ -49,6 +50,8 @@ class OfferingsConverter:
         data = self._offerings
         offerings_map = {}
         for x in data:
+            if x["CurrencyCode"] != "USD":
+                continue
             if x["InstanceType"] not in offerings_map:
                 offerings_map[x["InstanceType"]] = dict(
                     zip(self.SEARCH_KEYS, [False] * len(self.SEARCH_KEYS)))
