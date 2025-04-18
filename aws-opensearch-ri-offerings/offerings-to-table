@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+
+import csv
+import sys
+import argparse
+import json
+import subprocess
+
+
+SERVICE = "opensearch"
+
+
+# Opensearch CLI does not support filter options.
+# This class fetches paginated results and concatenate.
+class OfferingsFetcher:
+    def __init__(self):
+        pass
+
+    def fetch(self):
+        o = []
+        cmd = ["aws", "opensearch", "describe-reserved-instance-offerings"]
+        p = subprocess.run(cmd, capture_output=True)
+        out = p.stdout
+        j = json.loads(out)
+        o += j["ReservedInstanceOfferings"]
+        while "NextToken" in j:
+            cmd_cont = [
+                "aws", "opensearch", "describe-reserved-instance-offerings",
+                "--next-token", j["NextToken"],
+                ]
+            p = subprocess.run(cmd_cont, capture_output=True)
+            out = p.stdout
+            j = json.loads(out)
+            o += j["ReservedInstanceOfferings"]
+        return o
+
+
+class OfferingsConverter:
+    SEARCH_KEYS = [
+        "Duration",
+        "PaymentOption",
+        "ReservedInstanceOfferingId",
+        ]
+
+    def __init__(self, o):
+        self._offerings = o
+
+    def convert(self):
+        data = self._offerings
+        offerings_map = {}
+        for x in data:
+            if x["InstanceType"] not in offerings_map:
+                offerings_map[x["InstanceType"]] = dict(
+                    zip(self.SEARCH_KEYS, [False] * len(self.SEARCH_KEYS)))
+                offerings_map[x["InstanceType"]]["InstanceType"] = x["InstanceType"]
+            for key in self.SEARCH_KEYS:
+                offerings_map[x["InstanceType"]][key] = x[key]
+        cw = csv.DictWriter(sys.stdout,
+                            fieldnames=["InstanceType"] + self.SEARCH_KEYS,
+                            dialect='unixcsv')
+        cw.writeheader()
+        for instance_type in sorted(offerings_map):
+            cw.writerow(offerings_map[instance_type])
+
+class OfferingsCLI:
+    def __init__(self):
+        self._args = None
+
+    def options(self, argv):
+        parser = argparse.ArgumentParser(
+            description=f"Generate {SERVICE.title()} Instance type offerings"
+        )
+        parser.add_argument("--region")
+        self._args = parser.parse_args(sys.argv[1:])
+
+    def run(self):
+        f = OfferingsFetcher()
+        o = f.fetch()
+        c = OfferingsConverter(o)
+        c.convert()
+
+if __name__ == "__main__":
+    csv.register_dialect('unixcsv', lineterminator="\n")
+    cli = OfferingsCLI()
+    cli.options(sys.argv)
+    cli.run()
