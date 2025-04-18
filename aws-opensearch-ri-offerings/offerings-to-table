@@ -53,17 +53,19 @@ class OfferingsConverter:
             if x["CurrencyCode"] != "USD":
                 continue
             if x["InstanceType"] not in offerings_map:
-                offerings_map[x["InstanceType"]] = dict(
-                    zip(self.SEARCH_KEYS, [False] * len(self.SEARCH_KEYS)))
-                offerings_map[x["InstanceType"]]["InstanceType"] = x["InstanceType"]
+                offerings_map[x["InstanceType"]] = []
+            o = {}
+            o["InstanceType"] = x["InstanceType"]
             for key in self.SEARCH_KEYS:
-                offerings_map[x["InstanceType"]][key] = x[key]
+                o[key] = x[key]
+            offerings_map[x["InstanceType"]].append(o)
         cw = csv.DictWriter(sys.stdout,
                             fieldnames=["InstanceType"] + self.SEARCH_KEYS,
                             dialect='unixcsv')
         cw.writeheader()
         for instance_type in sorted(offerings_map):
-            cw.writerow(offerings_map[instance_type])
+            for rowinfo in offerings_map[instance_type]:
+                cw.writerow(rowinfo)
 
 class OfferingsCLI:
     def __init__(self):
